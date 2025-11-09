@@ -1,0 +1,61 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Repo Explorer</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; }
+  .path { margin: 8px 0; color: #666; }
+  ul { list-style: none; padding-left: 16px; }
+  li { margin: 4px 0; }
+  a { text-decoration: none; }
+  .dir::before { content: "📁 "; }
+  .file::before { content: "📄 "; }
+  button { margin-right: 8px; }
+</style>
+<h1>expert-carnival</h1>
+<div class="path">Path: <span id="crumbs">/</span></div>
+<div>
+  <button id="upBtn">⬆️ Up</button>
+  <button id="rootBtn">🏠 Root</button>
+</div>
+<ul id="list"></ul>
+
+<script>
+const OWNER = "MateoHaxhi07";
+const REPO  = "expert-carnival";
+let stack = [""]; // path segments; "" = root
+
+async function list(path="") {
+  const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(await res.text());
+  const data = await res.json();
+  data.sort((a,b) => (a.type===b.type? a.name.localeCompare(b.name) : a.type==="dir"? -1:1));
+  const ul = document.getElementById("list");
+  ul.innerHTML = "";
+  document.getElementById("crumbs").textContent = "/" + stack.filter(Boolean).join("/");
+  data.forEach(item => {
+    const li = document.createElement("li");
+    const a  = document.createElement("a");
+    a.textContent = item.name;
+    if (item.type === "dir") {
+      a.href = "#";
+      a.onclick = (e)=>{ e.preventDefault(); stack.push(item.name); render(); };
+      a.className = "dir";
+    } else {
+      a.href = `https://github.com/${OWNER}/${REPO}/blob/main/${(stack.filter(Boolean).concat(item.name)).join("/")}`;
+      a.target = "_blank";
+      a.className = "file";
+    }
+    li.appendChild(a);
+    ul.appendChild(li);
+  });
+}
+
+function up(){ if (stack.length>1) { stack.pop(); render(); } }
+function root(){ stack = [""]; render(); }
+async function render(){ await list(stack.filter(Boolean).join("/")); }
+
+document.getElementById("upBtn").onclick = up;
+document.getElementById("rootBtn").onclick = root;
+render();
+</script>
